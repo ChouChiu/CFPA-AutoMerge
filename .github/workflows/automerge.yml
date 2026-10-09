@@ -32,11 +32,11 @@ jobs:
         run: |
           set -euo pipefail
           if ! gh release view automerge > /dev/null 2>&1; then
-            gh release create automerge --prerelease --title "AutoMerge" \
+            gh release create automerge --title "AutoMerge" \
               --notes "初始化" --target "$GITHUB_SHA"
           fi
           # Packs first, then checksums, so a checksum never points at a pack
           # that is not uploaded yet
           gh release upload automerge dist/*.zip --clobber
           gh release upload automerge dist/*.md5 --clobber
-          gh release edit automerge --notes-file dist/notes.md
+          gh release edit automerge --prerelease=false --latest --notes-file dist/notes.md
