@@ -1,0 +1,42 @@
+name: AutoMerge
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: automerge
+  cancel-in-progress: false
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Merge pull requests and pack
+        run: bash automerge.sh
+
+      - name: Publish release
+        run: |
+          set -euo pipefail
+          if ! gh release view automerge > /dev/null 2>&1; then
+            gh release create automerge --prerelease --title "AutoMerge" \
+              --notes "初始化" --target "$GITHUB_SHA"
+          fi
+          # Packs first, then checksums, so a checksum never points at a pack
+          # that is not uploaded yet
+          gh release upload automerge dist/*.zip --clobber
+          gh release upload automerge dist/*.md5 --clobber
+          gh release edit automerge --notes-file dist/notes.md
